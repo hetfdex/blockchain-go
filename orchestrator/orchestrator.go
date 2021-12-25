@@ -62,6 +62,24 @@ func AddBlock(bc blockchain.Blockchain, transactions []transaction.Transaction) 
 	return nil
 }
 
+func PrintBalance(bc blockchain.Blockchain, address string) error {
+	var balance uint64
+
+	unspentTxOutputs, err := bc.FindUnspentTxOutputs(address)
+
+	if err != nil {
+		return err
+	}
+
+	for _, out := range unspentTxOutputs {
+		balance += out.Value
+	}
+
+	fmt.Printf("Balance of %s: %d\n", address, balance)
+
+	return nil
+}
+
 func PrintBlocks(bc blockchain.Blockchain) error {
 	block, err := bc.GetLatest()
 
