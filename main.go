@@ -2,11 +2,14 @@ package main
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/hetfdex/blockchain-go/orchestrator"
 )
 
 func main() {
+	_ = os.RemoveAll("./tmp")
+
 	db, wrapper, err := orchestrator.InitDb()
 
 	if err != nil {
@@ -34,4 +37,5 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	_ = os.RemoveAll("./tmp")
 }
