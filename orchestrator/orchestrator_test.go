@@ -13,8 +13,13 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
+const (
+	data = "test_data"
+)
+
 var (
 	errExpected = errors.New("error")
+	prevHash    = []byte("test_prev_hash")
 )
 
 func TestInitDb(t *testing.T) {
@@ -32,7 +37,6 @@ func TestInitDb(t *testing.T) {
 }
 
 func TestInitBlockchain_MakeNew_Err(t *testing.T) {
-
 	wrapper := badgerwrapper.BadgerWrapperMock{}
 
 	wrapper.On("Get", mock.Anything).Return([]byte{}, badgerwrapper.ErrBlockNotFound)
@@ -75,12 +79,7 @@ func TestInitBlockchain_MakeNew(t *testing.T) {
 }
 
 func TestInitBlockchain_Restored(t *testing.T) {
-	b := &block.Block{
-		Data:     []byte("data"),
-		PrevHash: []byte("previous_hash"),
-		Hash:     []byte("hash"),
-		Nonce:    0,
-	}
+	b := block.New(data, prevHash)
 
 	value, err := json.Marshal(b)
 
@@ -119,12 +118,7 @@ func TestAddBlock_ErrGetLatest(t *testing.T) {
 }
 
 func TestAddBlock_ErrSet(t *testing.T) {
-	b := block.Block{
-		Data:     []byte("data"),
-		PrevHash: []byte("previous_hash"),
-		Hash:     []byte("hash"),
-		Nonce:    0,
-	}
+	b := block.New(data, prevHash)
 
 	bc := blockchain.BlockchainMock{}
 
@@ -137,12 +131,7 @@ func TestAddBlock_ErrSet(t *testing.T) {
 }
 
 func TestAddBlock_Ok(t *testing.T) {
-	b := block.Block{
-		Data:     []byte("data"),
-		PrevHash: []byte("previous_hash"),
-		Hash:     []byte("hash"),
-		Nonce:    0,
-	}
+	b := block.New(data, prevHash)
 
 	bc := blockchain.BlockchainMock{}
 
@@ -165,12 +154,7 @@ func TestPrintBlocks_ErrGetLatest(t *testing.T) {
 }
 
 func TestPrintBlocks_ErrGet(t *testing.T) {
-	b := block.Block{
-		Data:     []byte("data"),
-		PrevHash: []byte("previous_hash"),
-		Hash:     []byte("hash"),
-		Nonce:    0,
-	}
+	b := block.New(data, prevHash)
 
 	bc := blockchain.BlockchainMock{}
 
@@ -183,17 +167,15 @@ func TestPrintBlocks_ErrGet(t *testing.T) {
 }
 
 func TestPrintBlocks_Ok(t *testing.T) {
-	b := block.Block{
-		Data:     []byte("data"),
-		PrevHash: []byte("previous_hash"),
-		Hash:     []byte("hash"),
-		Nonce:    0,
-	}
+	b1 := block.NewGenesis()
+	b2 := block.New(data, b1.Hash)
+	b3 := block.New(data, b2.Hash)
 
 	bc := blockchain.BlockchainMock{}
 
-	bc.On("GetLatest").Return(b, nil)
-	bc.On("Get", b.PrevHash).Return(block.Block{}, nil)
+	bc.On("GetLatest").Return(b3, nil)
+	bc.On("Get", b3.PrevHash).Return(b2, nil)
+	bc.On("Get", b2.PrevHash).Return(b1, nil)
 
 	err := PrintBlocks(&bc)
 

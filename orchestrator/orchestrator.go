@@ -8,7 +8,6 @@ import (
 	"github.com/hetfdex/blockchain-go/badgerwrapper"
 	"github.com/hetfdex/blockchain-go/block"
 	"github.com/hetfdex/blockchain-go/blockchain"
-	"github.com/hetfdex/blockchain-go/proofofwork"
 )
 
 const (
@@ -48,13 +47,6 @@ func InitBlockchain(wrapper badgerwrapper.BadgerWrapper) (blockchain.Blockchain,
 func makeNewBlockchain(bc blockchain.Blockchain) error {
 	genesisBlock := block.NewGenesis()
 
-	pow := proofofwork.New(&genesisBlock)
-
-	nonce, hash := pow.Prove()
-
-	genesisBlock.Hash = hash[:]
-	genesisBlock.Nonce = nonce
-
 	err := bc.Set(genesisBlock)
 
 	if err != nil {
@@ -71,13 +63,6 @@ func AddBlock(bc blockchain.Blockchain, data string) error {
 	}
 
 	b := block.New(data, previousBlock.Hash)
-
-	pow := proofofwork.New(&b)
-
-	nonce, hash := pow.Prove()
-
-	b.Hash = hash[:]
-	b.Nonce = nonce
 
 	err = bc.Set(b)
 
@@ -113,12 +98,10 @@ func PrintBlocks(bc blockchain.Blockchain) error {
 }
 
 func printBlock(block block.Block) {
-	pow := proofofwork.New(&block)
-
 	fmt.Printf("Data: %s\n", block.Data)
 	fmt.Printf("Prev Hash: %x\n", block.PrevHash)
 	fmt.Printf("Hash: %x\n", block.Hash)
 	fmt.Printf("Nonce: %d\n", block.Nonce)
-	fmt.Printf("Valid: %s\n", strconv.FormatBool(pow.Validate()))
+	fmt.Printf("Valid: %s\n", strconv.FormatBool(block.Validate()))
 	fmt.Println()
 }
