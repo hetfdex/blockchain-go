@@ -4,23 +4,16 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/json"
-	"fmt"
 )
 
 const (
-	reward      = 100
-	defaultData = "transaction for %s"
+	reward = 100
+
+	genesisData = "genesis_data"
 )
 
-type TxOutput struct {
-	Value     uint64 `json:"value"`
-	PublicKey string `json:"public_key"`
-}
-
-type TxInput struct {
-	ID          []byte `json:"id"`
-	OutputIndex uint64 `json:"output_index"`
-	Signature   string `json:"signature"`
+type TransactionValidator interface {
+	ValidGenesisTransaction() bool
 }
 
 type Transaction struct {
@@ -29,33 +22,48 @@ type Transaction struct {
 	Outputs []TxOutput `json:"outputs"`
 }
 
-func NewGenesisTransaction(data string, to string) Transaction {
-	if data == "" {
-		data = fmt.Sprintf(defaultData, to)
-	}
-	txInput := TxInput{
-		ID:          nil,
-		OutputIndex: 0,
-		Signature:   data,
+func New(inputs []TxInput, outputs []TxOutput) Transaction {
+	tx := Transaction{
+		Inputs:  inputs,
+		Outputs: outputs,
 	}
 
-	txOutput := TxOutput{
-		Value:     reward,
-		PublicKey: to,
-	}
+	tx.setID()
 
-	return Transaction{
-		ID: nil,
-		Inputs: []TxInput{
-			txInput,
-		},
-		Outputs: []TxOutput{
-			txOutput,
-		},
-	}
+	return tx
 }
 
-func (t *Transaction) SetID() error {
+func NewGenesis(to string) Transaction {
+	inputs := []TxInput{
+		{
+			OutputIndex: 0,
+			Signature:   genesisData,
+		},
+	}
+
+	outputs := []TxOutput{
+		{
+			Value:     reward,
+			PublicKey: to,
+		},
+	}
+
+	return New(inputs, outputs)
+}
+
+func (t *Transaction) ValidGenesisTransaction() bool {
+	if len(t.ID) == 32 && len(t.Inputs) == 1 && len(t.Outputs) == 1 {
+		input := t.Inputs[0]
+		output := t.Outputs[0]
+
+		if input.ID == nil && input.OutputIndex == 0 {
+			return output.Value == reward
+		}
+	}
+	return false
+}
+
+func (t *Transaction) setID() error {
 	var encoded bytes.Buffer
 	var hash [32]byte
 
@@ -72,24 +80,4 @@ func (t *Transaction) SetID() error {
 	t.ID = hash[:]
 
 	return nil
-}
-
-func (t *Transaction) ValidGenesisTransaction() bool {
-	if t.ID == nil && len(t.Inputs) == 1 && len(t.Outputs) == 1 {
-		input := t.Inputs[0]
-		output := t.Outputs[0]
-
-		if input.ID == nil && input.OutputIndex == 0 {
-			return output.Value == reward
-		}
-	}
-	return false
-}
-
-func (i *TxInput) ValidSignature(data string) bool {
-	return i.Signature == data
-}
-
-func (o *TxOutput) ValidPublicKey(data string) bool {
-	return o.PublicKey == data
 }
