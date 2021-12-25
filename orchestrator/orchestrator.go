@@ -8,14 +8,20 @@ import (
 	"github.com/hetfdex/blockchain-go/badgerwrapper"
 	"github.com/hetfdex/blockchain-go/block"
 	"github.com/hetfdex/blockchain-go/blockchain"
+	"github.com/hetfdex/blockchain-go/transaction"
 )
 
 const (
-	path = "./tmp/blocks"
+	dbPath     = "./tmp/blocks"
+	dbManifest = "./tmp/blocks/MANIFEST"
+)
+
+var (
+	genesisBlock = block.NewGenesis("genesis_data", "hetfdex")
 )
 
 func InitDb() (*badger.DB, badgerwrapper.BadgerWrapper, error) {
-	opts := badger.DefaultOptions(path).WithLoggingLevel(badger.WARNING)
+	opts := badger.DefaultOptions(dbPath).WithLoggingLevel(badger.WARNING)
 
 	db, err := badger.Open(opts)
 
@@ -31,38 +37,26 @@ func InitBlockchain(wrapper badgerwrapper.BadgerWrapper) (blockchain.Blockchain,
 	_, err := bc.GetLatest()
 
 	if err != nil {
-		if err == badgerwrapper.ErrBlockNotFound {
-			err := makeNewBlockchain(bc)
+		if err != badger.ErrKeyNotFound {
+			return nil, err
+		}
+		err = bc.Set(genesisBlock)
 
-			if err != nil {
-				return nil, err
-			}
-		} else {
+		if err != nil {
 			return nil, err
 		}
 	}
+
 	return bc, nil
 }
-
-func makeNewBlockchain(bc blockchain.Blockchain) error {
-	genesisBlock := block.NewGenesis()
-
-	err := bc.Set(genesisBlock)
-
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func AddBlock(bc blockchain.Blockchain, data string) error {
+func AddBlock(bc blockchain.Blockchain, data string, transactions []transaction.Transaction) error {
 	previousBlock, err := bc.GetLatest()
 
 	if err != nil {
 		return err
 	}
 
-	b := block.New(data, previousBlock.Hash)
+	b := block.New(data, previousBlock.Hash, transactions)
 
 	err = bc.Set(b)
 

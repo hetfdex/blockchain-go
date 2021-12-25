@@ -6,9 +6,11 @@ import (
 	"os"
 	"testing"
 
+	"github.com/dgraph-io/badger/v3"
 	"github.com/hetfdex/blockchain-go/badgerwrapper"
 	"github.com/hetfdex/blockchain-go/block"
 	"github.com/hetfdex/blockchain-go/blockchain"
+	"github.com/hetfdex/blockchain-go/transaction"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -18,8 +20,11 @@ const (
 )
 
 var (
+	key = []byte("key")
+
 	errExpected = errors.New("error")
-	prevHash    = []byte("test_prev_hash")
+
+	prevHash = []byte("test_prev_hash")
 )
 
 func TestInitDb(t *testing.T) {
@@ -36,19 +41,7 @@ func TestInitDb(t *testing.T) {
 	_ = res.Close()
 }
 
-func TestInitBlockchain_MakeNew_Err(t *testing.T) {
-	wrapper := badgerwrapper.BadgerWrapperMock{}
-
-	wrapper.On("Get", mock.Anything).Return([]byte{}, badgerwrapper.ErrBlockNotFound)
-	wrapper.On("Set", mock.Anything, mock.Anything).Return(errExpected)
-
-	res, err := InitBlockchain(&wrapper)
-
-	assert.Nil(t, res)
-	assert.EqualError(t, err, errExpected.Error())
-}
-
-func TestInitBlockchain_Err(t *testing.T) {
+func TestInitBlockchain_ErrGetLatest(t *testing.T) {
 	wrapper := badgerwrapper.BadgerWrapperMock{}
 
 	wrapper.On("Get", mock.Anything).Return([]byte{}, errExpected)
@@ -59,35 +52,26 @@ func TestInitBlockchain_Err(t *testing.T) {
 	assert.EqualError(t, err, errExpected.Error())
 }
 
-func TestInitBlockchain_MakeNew(t *testing.T) {
+func TestInitBlockchain_ErrKeyNotFound_ErrSet(t *testing.T) {
 	wrapper := badgerwrapper.BadgerWrapperMock{}
 
-	wrapper.On("Get", mock.Anything).Return([]byte{}, badgerwrapper.ErrBlockNotFound)
-	wrapper.On("Set", mock.Anything, mock.Anything).Return(nil)
+	wrapper.On("Get", mock.Anything).Return([]byte{}, badger.ErrKeyNotFound)
+	wrapper.On("Set", mock.Anything, mock.Anything).Return(errExpected)
 
 	res, err := InitBlockchain(&wrapper)
 
-	latestBlock, er := res.GetLatest()
-
-	if er != nil {
-		t.Fatal(er)
-	}
-
-	assert.Nil(t, err)
-	assert.NotNil(t, res)
-	assert.Equal(t, block.NewGenesis().Data, latestBlock.Data)
+	assert.Nil(t, res)
+	assert.EqualError(t, err, errExpected.Error())
 }
 
 func TestInitBlockchain_Restored(t *testing.T) {
-	b := block.New(data, prevHash)
+	b := block.New(data, prevHash, []transaction.Transaction{})
 
 	value, err := json.Marshal(b)
 
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	key := []byte("key")
 
 	wrapper := badgerwrapper.BadgerWrapperMock{}
 
@@ -107,38 +91,57 @@ func TestInitBlockchain_Restored(t *testing.T) {
 	assert.Equal(t, b.Data, latestBlock.Data)
 }
 
+func TestInitBlockchain_Created(t *testing.T) {
+	wrapper := badgerwrapper.BadgerWrapperMock{}
+
+	wrapper.On("Get", mock.Anything).Return([]byte{}, badger.ErrKeyNotFound)
+	wrapper.On("Set", mock.Anything, mock.Anything).Return(nil)
+
+	res, err := InitBlockchain(&wrapper)
+
+	latestBlock, er := res.GetLatest()
+
+	if er != nil {
+		t.Fatal(er)
+	}
+
+	assert.Nil(t, err)
+	assert.NotNil(t, res)
+	assert.Equal(t, genesisBlock, latestBlock)
+}
+
 func TestAddBlock_ErrGetLatest(t *testing.T) {
 	bc := blockchain.BlockchainMock{}
 
 	bc.On("GetLatest").Return(block.Block{}, errExpected)
 
-	err := AddBlock(&bc, "test")
+	err := AddBlock(&bc, "test", []transaction.Transaction{})
 
 	assert.EqualError(t, err, errExpected.Error())
 }
 
 func TestAddBlock_ErrSet(t *testing.T) {
-	b := block.New(data, prevHash)
+	b := block.New(data, prevHash, []transaction.Transaction{})
 
 	bc := blockchain.BlockchainMock{}
 
 	bc.On("GetLatest").Return(b, nil)
 	bc.On("Set", mock.Anything).Return(errExpected)
 
-	err := AddBlock(&bc, "test")
+	err := AddBlock(&bc, "test", []transaction.Transaction{})
 
 	assert.EqualError(t, err, errExpected.Error())
 }
 
 func TestAddBlock_Ok(t *testing.T) {
-	b := block.New(data, prevHash)
+	b := block.New(data, prevHash, []transaction.Transaction{})
 
 	bc := blockchain.BlockchainMock{}
 
 	bc.On("GetLatest").Return(b, nil)
 	bc.On("Set", mock.Anything).Return(nil)
 
-	err := AddBlock(&bc, "test")
+	err := AddBlock(&bc, "test", []transaction.Transaction{})
 
 	assert.Nil(t, err)
 }
@@ -154,7 +157,7 @@ func TestPrintBlocks_ErrGetLatest(t *testing.T) {
 }
 
 func TestPrintBlocks_ErrGet(t *testing.T) {
-	b := block.New(data, prevHash)
+	b := block.New(data, prevHash, []transaction.Transaction{})
 
 	bc := blockchain.BlockchainMock{}
 
@@ -167,9 +170,9 @@ func TestPrintBlocks_ErrGet(t *testing.T) {
 }
 
 func TestPrintBlocks_Ok(t *testing.T) {
-	b1 := block.NewGenesis()
-	b2 := block.New(data, b1.Hash)
-	b3 := block.New(data, b2.Hash)
+	b1 := block.NewGenesis("", "hetfdex")
+	b2 := block.New(data, b1.Hash, []transaction.Transaction{})
+	b3 := block.New(data, b2.Hash, []transaction.Transaction{})
 
 	bc := blockchain.BlockchainMock{}
 

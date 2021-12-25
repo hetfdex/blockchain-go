@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/hetfdex/blockchain-go/orchestrator"
+	"github.com/hetfdex/blockchain-go/transaction"
 )
 
 func main() {
@@ -25,7 +26,7 @@ func main() {
 	}
 
 	for i := 0; i < 5; i++ {
-		err = orchestrator.AddBlock(bc, fmt.Sprintf("%d", i))
+		err = orchestrator.AddBlock(bc, fmt.Sprintf("%d", i), []transaction.Transaction{})
 
 		if err != nil {
 			panic(err)
