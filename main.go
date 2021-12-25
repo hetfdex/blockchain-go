@@ -1,16 +1,11 @@
 package main
 
 import (
-	"fmt"
-	"os"
-
 	"github.com/hetfdex/blockchain-go/orchestrator"
 	"github.com/hetfdex/blockchain-go/transaction"
 )
 
 func main() {
-	_ = os.RemoveAll("./tmp")
-
 	db, wrapper, err := orchestrator.InitDb()
 
 	if err != nil {
@@ -26,7 +21,7 @@ func main() {
 	}
 
 	for i := 0; i < 5; i++ {
-		err = orchestrator.AddBlock(bc, fmt.Sprintf("%d", i), []transaction.Transaction{})
+		err = orchestrator.AddBlock(bc, []transaction.Transaction{})
 
 		if err != nil {
 			panic(err)
@@ -38,5 +33,4 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	_ = os.RemoveAll("./tmp")
 }
