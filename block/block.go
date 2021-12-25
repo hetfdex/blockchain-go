@@ -11,8 +11,7 @@ import (
 )
 
 const (
-	genesisBlockData = "genesis_block_data"
-	difficulty       = 10
+	difficulty = 10
 )
 
 type ProofOfWork interface {
@@ -21,7 +20,6 @@ type ProofOfWork interface {
 }
 
 type Block struct {
-	Data         []byte                    `json:"data"`
 	PrevHash     []byte                    `json:"prev_hash"`
 	Hash         []byte                    `json:"hash"`
 	Nonce        uint64                    `json:"nonce"`
@@ -29,13 +27,12 @@ type Block struct {
 	Transactions []transaction.Transaction `json:"transactions"`
 }
 
-func New(data string, prevHash []byte, transactions []transaction.Transaction) Block {
+func New(prevHash []byte, transactions []transaction.Transaction) Block {
 	target := big.NewInt(1)
 
 	target.Lsh(target, uint(256-difficulty))
 
 	b := Block{
-		Data:         []byte(data),
 		PrevHash:     prevHash,
 		Hash:         []byte{},
 		Nonce:        0,
@@ -48,12 +45,13 @@ func New(data string, prevHash []byte, transactions []transaction.Transaction) B
 	return b
 }
 
-func NewGenesis(data string, to string) Block {
-	transactions := []transaction.Transaction{
-		transaction.NewGenesisTransaction(data, to),
-	}
-
-	return New(genesisBlockData, []byte{}, transactions)
+func NewGenesis(to string) Block {
+	return New(
+		[]byte{},
+		[]transaction.Transaction{
+			transaction.NewGenesis(to),
+		},
+	)
 }
 
 func (b *Block) Validate() bool {
@@ -105,7 +103,6 @@ func (b *Block) prove() {
 func (b *Block) init(nonce uint64) []byte {
 	return bytes.Join(
 		[][]byte{
-			b.Data,
 			b.PrevHash,
 			toHex(nonce),
 			toHex(difficulty),

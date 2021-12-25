@@ -7,10 +7,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const (
-	data = "test_data"
-)
-
 var (
 	prevHash = []byte("test_prev_hash")
 )
@@ -18,9 +14,8 @@ var (
 func TestNewBlock(t *testing.T) {
 	tx := transaction.Transaction{}
 
-	b := New(data, prevHash, []transaction.Transaction{tx})
+	b := New(prevHash, []transaction.Transaction{tx})
 
-	assert.Equal(t, []byte(data), b.Data)
 	assert.Equal(t, prevHash, b.PrevHash)
 	assert.Equal(t, 32, len(b.Hash))
 	assert.True(t, b.Nonce != 0)
@@ -31,11 +26,10 @@ func TestNewBlock(t *testing.T) {
 func TestNewGenesisBlock(t *testing.T) {
 	to := "hetfdex"
 
-	b := NewGenesis(data, to)
+	b := NewGenesis(to)
 
-	tx := transaction.NewGenesisTransaction(data, to)
+	tx := transaction.NewGenesis(to)
 
-	assert.Equal(t, []byte(genesisBlockData), b.Data)
 	assert.Equal(t, []byte{}, b.PrevHash)
 	assert.Equal(t, 32, len(b.Hash))
 	assert.True(t, b.Nonce != 0)
@@ -45,7 +39,7 @@ func TestNewGenesisBlock(t *testing.T) {
 }
 
 func TestValidate_False(t *testing.T) {
-	b := New(data, prevHash, []transaction.Transaction{})
+	b := New(prevHash, []transaction.Transaction{})
 
 	b.Nonce = 666
 
@@ -53,7 +47,7 @@ func TestValidate_False(t *testing.T) {
 }
 
 func TestValidate_True(t *testing.T) {
-	b := New(data, prevHash, []transaction.Transaction{})
+	b := New(prevHash, []transaction.Transaction{})
 
 	assert.True(t, b.Validate())
 }
@@ -61,7 +55,7 @@ func TestValidate_True(t *testing.T) {
 func TestHashTransactions(t *testing.T) {
 	tx := transaction.Transaction{}
 
-	b := New(data, prevHash, []transaction.Transaction{tx})
+	b := New(prevHash, []transaction.Transaction{tx})
 
 	res := b.HashTransactions()
 
