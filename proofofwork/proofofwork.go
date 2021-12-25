@@ -10,6 +10,8 @@ import (
 	"github.com/hetfdex/blockchain-go/block"
 )
 
+//Integrate with block
+
 const (
 	difficulty = 10
 )
@@ -25,18 +27,18 @@ type proofOfWork struct {
 	Target *big.Int
 }
 
-func New(block *block.Block) ProofOfWork {
+func New(block *block.Block) proofOfWork {
 	target := big.NewInt(1)
 
 	target.Lsh(target, uint(256-difficulty))
 
-	return &proofOfWork{
+	return proofOfWork{
 		Block:  block,
 		Target: target,
 	}
 }
 
-func (p *proofOfWork) Init(nonce uint64) []byte {
+func (p proofOfWork) Init(nonce uint64) []byte {
 	return bytes.Join(
 		[][]byte{
 			p.Block.PrevHash,
@@ -48,7 +50,7 @@ func (p *proofOfWork) Init(nonce uint64) []byte {
 	)
 }
 
-func (p *proofOfWork) Prove() (uint64, []byte) {
+func (p proofOfWork) Prove() (uint64, []byte) {
 	var intHash big.Int
 	var hash [32]byte
 
@@ -69,7 +71,7 @@ func (p *proofOfWork) Prove() (uint64, []byte) {
 	return nonce, hash[:]
 }
 
-func (p *proofOfWork) Validate() bool {
+func (p proofOfWork) Validate() bool {
 	var intHash big.Int
 
 	data := p.Init(p.Block.Nonce)
