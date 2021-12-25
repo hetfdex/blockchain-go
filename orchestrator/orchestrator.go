@@ -48,7 +48,7 @@ func InitBlockchain(wrapper badgerwrapper.BadgerWrapper) (blockchain.Blockchain,
 func makeNewBlockchain(bc blockchain.Blockchain) error {
 	genesisBlock := block.NewGenesis()
 
-	pow := proofofwork.New(genesisBlock)
+	pow := proofofwork.New(&genesisBlock)
 
 	nonce, hash := pow.Prove()
 
@@ -72,7 +72,7 @@ func AddBlock(bc blockchain.Blockchain, data string) error {
 
 	b := block.New(data, previousBlock.Hash)
 
-	pow := proofofwork.New(b)
+	pow := proofofwork.New(&b)
 
 	nonce, hash := pow.Prove()
 
@@ -112,8 +112,8 @@ func PrintBlocks(bc blockchain.Blockchain) error {
 	return nil
 }
 
-func printBlock(block *block.Block) {
-	pow := proofofwork.New(block)
+func printBlock(block block.Block) {
+	pow := proofofwork.New(&block)
 
 	fmt.Printf("Data: %s\n", block.Data)
 	fmt.Printf("Prev Hash: %x\n", block.PrevHash)
