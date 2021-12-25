@@ -16,10 +16,6 @@ const (
 	dbManifest = "./tmp/blocks/MANIFEST"
 )
 
-var (
-	genesisBlock = block.NewGenesis("genesis_data", "hetfdex")
-)
-
 func InitDb() (*badger.DB, badgerwrapper.BadgerWrapper, error) {
 	opts := badger.DefaultOptions(dbPath).WithLoggingLevel(badger.WARNING)
 
@@ -40,7 +36,7 @@ func InitBlockchain(wrapper badgerwrapper.BadgerWrapper) (blockchain.Blockchain,
 		if err != badger.ErrKeyNotFound {
 			return nil, err
 		}
-		err = bc.Set(genesisBlock)
+		err = bc.Set(block.NewGenesis("hetfdex"))
 
 		if err != nil {
 			return nil, err
@@ -49,14 +45,14 @@ func InitBlockchain(wrapper badgerwrapper.BadgerWrapper) (blockchain.Blockchain,
 
 	return bc, nil
 }
-func AddBlock(bc blockchain.Blockchain, data string, transactions []transaction.Transaction) error {
+func AddBlock(bc blockchain.Blockchain, transactions []transaction.Transaction) error {
 	previousBlock, err := bc.GetLatest()
 
 	if err != nil {
 		return err
 	}
 
-	b := block.New(data, previousBlock.Hash, transactions)
+	b := block.New(previousBlock.Hash, transactions)
 
 	err = bc.Set(b)
 
@@ -92,7 +88,6 @@ func PrintBlocks(bc blockchain.Blockchain) error {
 }
 
 func printBlock(block block.Block) {
-	fmt.Printf("Data: %s\n", block.Data)
 	fmt.Printf("Prev Hash: %x\n", block.PrevHash)
 	fmt.Printf("Hash: %x\n", block.Hash)
 	fmt.Printf("Nonce: %d\n", block.Nonce)

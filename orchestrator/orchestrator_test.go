@@ -15,16 +15,14 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-const (
-	data = "test_data"
-)
-
 var (
 	key = []byte("key")
 
 	errExpected = errors.New("error")
 
 	prevHash = []byte("test_prev_hash")
+
+	genesisBlock = block.NewGenesis("hetfdex")
 )
 
 func TestInitDb(t *testing.T) {
@@ -65,7 +63,7 @@ func TestInitBlockchain_ErrKeyNotFound_ErrSet(t *testing.T) {
 }
 
 func TestInitBlockchain_Restored(t *testing.T) {
-	b := block.New(data, prevHash, []transaction.Transaction{})
+	b := block.New(prevHash, []transaction.Transaction{})
 
 	value, err := json.Marshal(b)
 
@@ -88,7 +86,7 @@ func TestInitBlockchain_Restored(t *testing.T) {
 
 	assert.Nil(t, err)
 	assert.NotNil(t, res)
-	assert.Equal(t, b.Data, latestBlock.Data)
+	assert.Equal(t, b, latestBlock)
 }
 
 func TestInitBlockchain_Created(t *testing.T) {
@@ -115,33 +113,33 @@ func TestAddBlock_ErrGetLatest(t *testing.T) {
 
 	bc.On("GetLatest").Return(block.Block{}, errExpected)
 
-	err := AddBlock(&bc, "test", []transaction.Transaction{})
+	err := AddBlock(&bc, []transaction.Transaction{})
 
 	assert.EqualError(t, err, errExpected.Error())
 }
 
 func TestAddBlock_ErrSet(t *testing.T) {
-	b := block.New(data, prevHash, []transaction.Transaction{})
+	b := block.New(prevHash, []transaction.Transaction{})
 
 	bc := blockchain.BlockchainMock{}
 
 	bc.On("GetLatest").Return(b, nil)
 	bc.On("Set", mock.Anything).Return(errExpected)
 
-	err := AddBlock(&bc, "test", []transaction.Transaction{})
+	err := AddBlock(&bc, []transaction.Transaction{})
 
 	assert.EqualError(t, err, errExpected.Error())
 }
 
 func TestAddBlock_Ok(t *testing.T) {
-	b := block.New(data, prevHash, []transaction.Transaction{})
+	b := block.New(prevHash, []transaction.Transaction{})
 
 	bc := blockchain.BlockchainMock{}
 
 	bc.On("GetLatest").Return(b, nil)
 	bc.On("Set", mock.Anything).Return(nil)
 
-	err := AddBlock(&bc, "test", []transaction.Transaction{})
+	err := AddBlock(&bc, []transaction.Transaction{})
 
 	assert.Nil(t, err)
 }
@@ -157,7 +155,7 @@ func TestPrintBlocks_ErrGetLatest(t *testing.T) {
 }
 
 func TestPrintBlocks_ErrGet(t *testing.T) {
-	b := block.New(data, prevHash, []transaction.Transaction{})
+	b := block.New(prevHash, []transaction.Transaction{})
 
 	bc := blockchain.BlockchainMock{}
 
@@ -170,15 +168,14 @@ func TestPrintBlocks_ErrGet(t *testing.T) {
 }
 
 func TestPrintBlocks_Ok(t *testing.T) {
-	b1 := block.NewGenesis("", "hetfdex")
-	b2 := block.New(data, b1.Hash, []transaction.Transaction{})
-	b3 := block.New(data, b2.Hash, []transaction.Transaction{})
+	b2 := block.New(genesisBlock.Hash, []transaction.Transaction{})
+	b3 := block.New(b2.Hash, []transaction.Transaction{})
 
 	bc := blockchain.BlockchainMock{}
 
 	bc.On("GetLatest").Return(b3, nil)
 	bc.On("Get", b3.PrevHash).Return(b2, nil)
-	bc.On("Get", b2.PrevHash).Return(b1, nil)
+	bc.On("Get", b2.PrevHash).Return(genesisBlock, nil)
 
 	err := PrintBlocks(&bc)
 
