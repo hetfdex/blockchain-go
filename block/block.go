@@ -11,8 +11,8 @@ type Block struct {
 	Nonce    uint64 `json:"nonce"`
 }
 
-func New(data string, prevHash []byte) *Block {
-	return &Block{
+func New(data string, prevHash []byte) Block {
+	return Block{
 		Data:     []byte(data),
 		PrevHash: prevHash,
 		Hash:     []byte{},
@@ -20,6 +20,6 @@ func New(data string, prevHash []byte) *Block {
 	}
 }
 
-func NewGenesis() *Block {
+func NewGenesis() Block {
 	return New(genesisBlockData, []byte{})
 }
