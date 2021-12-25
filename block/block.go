@@ -6,6 +6,8 @@ import (
 	"encoding/binary"
 	"math"
 	"math/big"
+
+	"github.com/hetfdex/blockchain-go/transaction"
 )
 
 const (
@@ -15,27 +17,30 @@ const (
 
 type ProofOfWork interface {
 	Validate() bool
+	HashTransactions() []byte
 }
 
 type Block struct {
-	Data     []byte   `json:"data"`
-	PrevHash []byte   `json:"prev_hash"`
-	Hash     []byte   `json:"hash"`
-	Nonce    uint64   `json:"nonce"`
-	Target   *big.Int `json:"target"`
+	Data         []byte                    `json:"data"`
+	PrevHash     []byte                    `json:"prev_hash"`
+	Hash         []byte                    `json:"hash"`
+	Nonce        uint64                    `json:"nonce"`
+	Target       *big.Int                  `json:"target"`
+	Transactions []transaction.Transaction `json:"transactions"`
 }
 
-func New(data string, prevHash []byte) Block {
+func New(data string, prevHash []byte, transactions []transaction.Transaction) Block {
 	target := big.NewInt(1)
 
 	target.Lsh(target, uint(256-difficulty))
 
 	b := Block{
-		Data:     []byte(data),
-		PrevHash: prevHash,
-		Hash:     []byte{},
-		Nonce:    0,
-		Target:   target,
+		Data:         []byte(data),
+		PrevHash:     prevHash,
+		Hash:         []byte{},
+		Nonce:        0,
+		Target:       target,
+		Transactions: transactions,
 	}
 
 	b.prove()
@@ -43,8 +48,12 @@ func New(data string, prevHash []byte) Block {
 	return b
 }
 
-func NewGenesis() Block {
-	return New(genesisBlockData, []byte{})
+func NewGenesis(data string, to string) Block {
+	transactions := []transaction.Transaction{
+		transaction.NewGenesisTransaction(data, to),
+	}
+
+	return New(genesisBlockData, []byte{}, transactions)
 }
 
 func (b *Block) Validate() bool {
@@ -57,6 +66,18 @@ func (b *Block) Validate() bool {
 	intHash.SetBytes(hash[:])
 
 	return intHash.Cmp(b.Target) == -1
+}
+
+func (b *Block) HashTransactions() []byte {
+	var txHashes [][]byte
+	var txHash [32]byte
+
+	for _, tx := range b.Transactions {
+		txHashes = append(txHashes, tx.ID)
+	}
+	txHash = sha256.Sum256(bytes.Join(txHashes, []byte{}))
+
+	return txHash[:]
 }
 
 func (b *Block) prove() {
@@ -84,10 +105,11 @@ func (b *Block) prove() {
 func (b *Block) init(nonce uint64) []byte {
 	return bytes.Join(
 		[][]byte{
-			b.PrevHash,
 			b.Data,
+			b.PrevHash,
 			toHex(nonce),
 			toHex(difficulty),
+			b.HashTransactions(),
 		},
 		[]byte{},
 	)
