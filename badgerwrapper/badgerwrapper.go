@@ -1,13 +1,7 @@
 package badgerwrapper
 
 import (
-	"errors"
-
 	"github.com/dgraph-io/badger/v3"
-)
-
-var (
-	ErrBlockNotFound = errors.New("block not found")
 )
 
 type BadgerWrapper interface {
@@ -52,15 +46,8 @@ func (w *badgerWrapper) Get(key []byte) ([]byte, error) {
 	})
 
 	if err != nil {
-		return nil, handleErrKeyNotFound(err)
+		return nil, err
 	}
 
 	return res, nil
-}
-
-func handleErrKeyNotFound(err error) error {
-	if err == badger.ErrKeyNotFound {
-		return ErrBlockNotFound
-	}
-	return err
 }
