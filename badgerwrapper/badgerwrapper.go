@@ -19,7 +19,7 @@ type badgerWrapper struct {
 	db *badger.DB
 }
 
-func New(db *badger.DB) BadgerWrapper {
+func New(db *badger.DB) *badgerWrapper {
 	return &badgerWrapper{
 		db: db,
 	}
