@@ -13,7 +13,6 @@ import (
 
 var (
 	b = block.Block{
-		Data:     []byte("data"),
 		PrevHash: []byte("previous_hash"),
 		Hash:     []byte("hash"),
 		Nonce:    0,

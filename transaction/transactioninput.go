@@ -1,7 +1,7 @@
 package transaction
 
 type TxInputValidator interface {
-	ValidSignature(data string) bool
+	ValidSignature(string) bool
 }
 
 type TxInput struct {

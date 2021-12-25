@@ -1,7 +1,7 @@
 package transaction
 
 type TxOutputValidator interface {
-	ValidPublicKey(data string) bool
+	ValidPublicKey(string) bool
 }
 
 type TxOutput struct {

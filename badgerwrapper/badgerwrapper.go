@@ -5,8 +5,8 @@ import (
 )
 
 type BadgerWrapper interface {
-	Set(key []byte, value []byte) error
-	Get(key []byte) ([]byte, error)
+	Set([]byte, []byte) error
+	Get([]byte) ([]byte, error)
 }
 
 type badgerWrapper struct {
