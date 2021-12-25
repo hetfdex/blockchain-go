@@ -12,41 +12,41 @@ import (
 )
 
 var (
-	b = &block.Block{
+	b = block.Block{
 		Data:     []byte("data"),
 		PrevHash: []byte("previous_hash"),
 		Hash:     []byte("hash"),
 		Nonce:    0,
 	}
+	errExpected = errors.New("error")
+
+	key = []byte("key")
 )
 
 func TestSet_ErrBlockHash(t *testing.T) {
-	expectedErr := errors.New("error")
 
 	wrapperMock := badgerwrapper.BadgerWrapperMock{}
 
-	wrapperMock.On("Set", b.Hash, mock.Anything).Return(expectedErr)
+	wrapperMock.On("Set", b.Hash, mock.Anything).Return(errExpected)
 
 	bc := New(&wrapperMock)
 
 	err := bc.Set(b)
 
-	assert.EqualError(t, err, expectedErr.Error())
+	assert.EqualError(t, err, errExpected.Error())
 }
 
 func TestSet_ErrLatestBlockHashKey(t *testing.T) {
-	expectedErr := errors.New("error")
-
 	wrapperMock := badgerwrapper.BadgerWrapperMock{}
 
 	wrapperMock.On("Set", b.Hash, mock.Anything).Return(nil)
-	wrapperMock.On("Set", []byte(latestBlockHashKey), mock.Anything).Return(expectedErr)
+	wrapperMock.On("Set", []byte(latestBlockHashKey), mock.Anything).Return(errExpected)
 
 	bc := New(&wrapperMock)
 
 	err := bc.Set(b)
 
-	assert.EqualError(t, err, expectedErr.Error())
+	assert.EqualError(t, err, errExpected.Error())
 }
 
 func TestSet_Ok(t *testing.T) {
@@ -69,24 +69,19 @@ func TestSet_Ok(t *testing.T) {
 }
 
 func TestGet_ErrGet(t *testing.T) {
-	key := []byte("key")
-
-	expectedErr := errors.New("error")
-
 	wrapperMock := badgerwrapper.BadgerWrapperMock{}
 
-	wrapperMock.On("Get", key).Return([]byte{}, expectedErr)
+	wrapperMock.On("Get", key).Return([]byte{}, errExpected)
 
 	bc := New(&wrapperMock)
 
 	res, err := bc.Get(key)
 
-	assert.Nil(t, res)
-	assert.EqualError(t, err, expectedErr.Error())
+	assert.Equal(t, block.Block{}, res)
+	assert.EqualError(t, err, errExpected.Error())
 }
 
 func TestGet_ErrUnmarshall(t *testing.T) {
-	key := []byte("key")
 	value := []byte("value")
 
 	wrapperMock := badgerwrapper.BadgerWrapperMock{}
@@ -97,13 +92,11 @@ func TestGet_ErrUnmarshall(t *testing.T) {
 
 	res, err := bc.Get(key)
 
-	assert.Nil(t, res)
+	assert.Equal(t, block.Block{}, res)
 	assert.NotNil(t, err)
 }
 
 func TestGet_OK(t *testing.T) {
-	key := []byte("key")
-
 	value, err := json.Marshal(b)
 
 	if err != nil {
@@ -134,41 +127,33 @@ func TestGetLatest_OkFromLatestBlock(t *testing.T) {
 }
 
 func TestGetLatest_ErrLatestBlockHashKey(t *testing.T) {
-	expectedErr := errors.New("error")
-
 	wrapperMock := badgerwrapper.BadgerWrapperMock{}
 
-	wrapperMock.On("Get", []byte(latestBlockHashKey)).Return([]byte{}, expectedErr)
+	wrapperMock.On("Get", []byte(latestBlockHashKey)).Return([]byte{}, errExpected)
 
 	bc := New(&wrapperMock)
 
 	res, err := bc.GetLatest()
 
-	assert.Nil(t, res)
-	assert.EqualError(t, err, expectedErr.Error())
+	assert.Equal(t, block.Block{}, res)
+	assert.EqualError(t, err, errExpected.Error())
 }
 
 func TestGetLatest_ErrLatestBlockHash(t *testing.T) {
-	key := []byte("key")
-
-	expectedErr := errors.New("error")
-
 	wrapperMock := badgerwrapper.BadgerWrapperMock{}
 
 	wrapperMock.On("Get", []byte(latestBlockHashKey)).Return(key, nil)
-	wrapperMock.On("Get", key).Return([]byte{}, expectedErr)
+	wrapperMock.On("Get", key).Return([]byte{}, errExpected)
 
 	bc := New(&wrapperMock)
 
 	res, err := bc.GetLatest()
 
-	assert.Nil(t, res)
-	assert.EqualError(t, err, expectedErr.Error())
+	assert.Equal(t, block.Block{}, res)
+	assert.EqualError(t, err, errExpected.Error())
 }
 
 func TestGetLatest_OkFromDb(t *testing.T) {
-	key := []byte("key")
-
 	value, err := json.Marshal(b)
 
 	if err != nil {
