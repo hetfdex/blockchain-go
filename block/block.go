@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/binary"
+	"encoding/hex"
 	"math"
 	"math/big"
 
@@ -17,6 +18,7 @@ const (
 type ProofOfWork interface {
 	Validate() bool
 	HashTransactions() []byte
+	FindUnspentTransactions(string) ([]transaction.Transaction, map[string][]int)
 }
 
 type Block struct {
@@ -98,6 +100,40 @@ func (b *Block) prove() {
 	}
 	b.Nonce = nonce
 	b.Hash = hash[:]
+}
+
+func (b *Block) FindUnspentTransactions(address string) []transaction.Transaction {
+	unspentTxs := []transaction.Transaction{}
+
+	spentTxs := make(map[string][]int)
+
+	for _, tx := range b.Transactions {
+		id := hex.EncodeToString(tx.ID)
+
+	Outputs:
+		for i, out := range tx.Outputs {
+			if spentTxs[id] != nil {
+				for _, spentOut := range spentTxs[id] {
+					if spentOut == i {
+						continue Outputs
+					}
+				}
+			}
+			if out.ValidPublicKey(address) {
+				unspentTxs = append(unspentTxs, tx)
+			}
+		}
+		if !tx.ValidGenesisTransaction() {
+			for _, in := range tx.Inputs {
+				if in.ValidSignature(address) {
+					id := hex.EncodeToString(in.ID)
+
+					spentTxs[id] = append(spentTxs[id], int(in.OutputIndex))
+				}
+			}
+		}
+	}
+	return unspentTxs
 }
 
 func (b *Block) init(nonce uint64) []byte {

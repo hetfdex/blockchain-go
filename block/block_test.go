@@ -61,3 +61,67 @@ func TestHashTransactions(t *testing.T) {
 
 	assert.Equal(t, 32, len(res))
 }
+
+//Needs proper testing
+func TestFindUnspentTransactions(t *testing.T) {
+	from := "from"
+	to := "to"
+
+	prevHash := []byte("prev_hash")
+
+	tx1 := transaction.New(
+		[]transaction.TxInput{
+			{
+				ID:          []byte("626c61"),
+				OutputIndex: 0,
+				Signature:   to,
+			},
+			{
+				ID:          []byte("626c65"),
+				OutputIndex: 1,
+				Signature:   from,
+			},
+		},
+		[]transaction.TxOutput{
+			{
+				Value:     10,
+				PublicKey: from,
+			},
+			{
+				Value:     20,
+				PublicKey: to,
+			},
+		})
+
+	tx2 := transaction.New(
+		[]transaction.TxInput{
+			{
+				ID:          []byte("626c65"),
+				OutputIndex: 0,
+				Signature:   from,
+			},
+			{
+				ID:          []byte("626c61"),
+				OutputIndex: 1,
+				Signature:   to,
+			},
+		},
+		[]transaction.TxOutput{
+			{
+				Value:     50,
+				PublicKey: to,
+			},
+			{
+				Value:     30,
+				PublicKey: from,
+			},
+		})
+
+	transactions := []transaction.Transaction{tx1, tx2}
+
+	b := New(prevHash, transactions)
+
+	res := b.FindUnspentTransactions(to)
+
+	assert.Equal(t, transactions, res)
+}
