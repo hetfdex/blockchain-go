@@ -17,12 +17,12 @@ const (
 )
 
 type Block struct {
+	CreatedAt       time.Time
 	PreviousHash    []byte
 	Hash            []byte
 	Nonce           uint64
 	TargetDificulty *big.Int
 	Transactions    []transaction.Transaction
-	CreatedAt       time.Time
 }
 
 func New(previousHash []byte, transactions []transaction.Transaction) Block {
@@ -31,12 +31,12 @@ func New(previousHash []byte, transactions []transaction.Transaction) Block {
 	targetDificulty = targetDificulty.Lsh(targetDificulty, uint(256-difficulty))
 
 	b := Block{
+		CreatedAt:       time.Now().UTC(),
 		PreviousHash:    previousHash,
 		Hash:            []byte{},
 		Nonce:           0,
 		TargetDificulty: targetDificulty,
 		Transactions:    transactions,
-		CreatedAt:       time.Now().UTC(),
 	}
 
 	b.mine()
@@ -101,11 +101,11 @@ func (b *Block) mine() {
 func (b *Block) makeHashData(nonce uint64) []byte {
 	return bytes.Join(
 		[][]byte{
+			[]byte(b.CreatedAt.String()),
 			b.PreviousHash,
 			toHex(nonce),
 			toHex(difficulty),
 			b.hashTransactions(),
-			[]byte(b.CreatedAt.String()),
 		},
 		[]byte{},
 	)

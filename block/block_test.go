@@ -19,12 +19,12 @@ func TestNew(t *testing.T) {
 
 	tm := time.Now().UTC()
 
+	assert.True(t, b.CreatedAt.Before(tm))
 	assert.Equal(t, previousHash, b.PreviousHash)
 	assert.Equal(t, 32, len(b.Hash))
 	assert.True(t, b.Nonce > 0)
 	assert.Equal(t, 31, len(b.TargetDificulty.Bytes()))
 	assert.Equal(t, tx, b.Transactions[0])
-	assert.True(t, b.CreatedAt.Before(tm))
 }
 
 func TestGenesis(t *testing.T) {
@@ -34,12 +34,12 @@ func TestGenesis(t *testing.T) {
 
 	tm := time.Now().UTC()
 
+	assert.True(t, b.CreatedAt.Before(tm))
 	assert.Equal(t, []byte(genesisPreviousHash), b.PreviousHash)
 	assert.Equal(t, 32, len(b.Hash))
 	assert.True(t, b.Nonce != 0)
 	assert.Equal(t, 31, len(b.TargetDificulty.Bytes()))
 	assert.Equal(t, tx, b.Transactions[0])
-	assert.True(t, b.CreatedAt.Before(tm))
 }
 
 func TestValidHash_False(t *testing.T) {
