@@ -26,11 +26,15 @@ type Block struct {
 }
 
 func New(previousHash []byte, transactions []transaction.Transaction) Block {
+	targetDificulty := big.NewInt(1)
+
+	targetDificulty = targetDificulty.Lsh(targetDificulty, uint(256-difficulty))
+
 	b := Block{
 		PreviousHash:    previousHash,
 		Hash:            []byte{},
 		Nonce:           0,
-		TargetDificulty: makeTargetDifficulty(),
+		TargetDificulty: targetDificulty,
 		Transactions:    transactions,
 		CreatedAt:       time.Now().UTC(),
 	}
@@ -44,7 +48,7 @@ func Genesis() Block {
 	return New([]byte(genesisPreviousHash), []transaction.Transaction{transaction.Genesis()})
 }
 
-func (b *Block) Validate() bool {
+func (b *Block) ValidHash() bool {
 	var intHash big.Int
 
 	data := b.makeHashData(b.Nonce)
@@ -56,10 +60,20 @@ func (b *Block) Validate() bool {
 	return intHash.Cmp(b.TargetDificulty) == -1
 }
 
-func makeTargetDifficulty() *big.Int {
-	targetDificulty := big.NewInt(1)
+func (b *Block) ValidGenesis() bool {
+	if !bytes.Equal(b.PreviousHash, []byte(genesisPreviousHash)) {
+		return false
+	}
 
-	return targetDificulty.Lsh(targetDificulty, uint(256-difficulty))
+	if len(b.Transactions) != 1 {
+		return false
+	}
+
+	if !transaction.Equal(b.Transactions[0], transaction.Genesis()) {
+		return false
+	}
+
+	return b.ValidHash()
 }
 
 func (b *Block) mine() {
@@ -97,14 +111,6 @@ func (b *Block) makeHashData(nonce uint64) []byte {
 	)
 }
 
-func toHex(i uint64) []byte {
-	buffer := new(bytes.Buffer)
-
-	_ = binary.Write(buffer, binary.BigEndian, i)
-
-	return buffer.Bytes()
-}
-
 func (b *Block) hashTransactions() []byte {
 	var txHashes [][]byte
 	var txHash [32]byte
@@ -115,4 +121,12 @@ func (b *Block) hashTransactions() []byte {
 	txHash = sha256.Sum256(bytes.Join(txHashes, []byte{}))
 
 	return txHash[:]
+}
+
+func toHex(i uint64) []byte {
+	buffer := new(bytes.Buffer)
+
+	_ = binary.Write(buffer, binary.BigEndian, i)
+
+	return buffer.Bytes()
 }

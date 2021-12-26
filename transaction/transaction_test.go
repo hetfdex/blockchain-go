@@ -22,7 +22,6 @@ var (
 func TestNew(t *testing.T) {
 	tx := New(txIns, txOuts)
 
-	assert.NotNil(t, tx)
 	assert.Equal(t, txIns, tx.TxInputs)
 	assert.Equal(t, txOuts, tx.TxOutputs)
 	assert.Equal(t, 32, len(tx.ID))
@@ -31,7 +30,6 @@ func TestNew(t *testing.T) {
 func TestGenesis(t *testing.T) {
 	tx := Genesis()
 
-	assert.NotNil(t, tx)
 	assert.Equal(t, 1, len(tx.TxInputs))
 	assert.Equal(t, 1, len(tx.TxOutputs))
 	assert.Equal(t, 32, len(tx.ID))
@@ -47,9 +45,7 @@ func TestEqual_False_Tx_ID(t *testing.T) {
 
 	txB.ID = []byte("fake_id")
 
-	res := Equal(txA, txB)
-
-	assert.False(t, res)
+	assert.False(t, Equal(txA, txB))
 }
 
 func TestEqual_False_TxOuts_Len(t *testing.T) {
@@ -61,9 +57,7 @@ func TestEqual_False_TxOuts_Len(t *testing.T) {
 		PublicKey: "another_test_pubic_key",
 	})
 
-	res := Equal(txA, txB)
-
-	assert.False(t, res)
+	assert.False(t, Equal(txA, txB))
 }
 
 func TestEqual_False_TxIn_Id(t *testing.T) {
@@ -78,9 +72,7 @@ func TestEqual_False_TxIn_Id(t *testing.T) {
 
 	txB.TxInputs = cp
 
-	res := Equal(txA, txB)
-
-	assert.False(t, res)
+	assert.False(t, Equal(txA, txB))
 }
 
 func TestEqual_False_TxOut_OutputIndex(t *testing.T) {
@@ -95,9 +87,7 @@ func TestEqual_False_TxOut_OutputIndex(t *testing.T) {
 
 	txB.TxInputs = cp
 
-	res := Equal(txA, txB)
-
-	assert.False(t, res)
+	assert.False(t, Equal(txA, txB))
 }
 
 func TestEqual_False_TxOut_Signature(t *testing.T) {
@@ -112,9 +102,7 @@ func TestEqual_False_TxOut_Signature(t *testing.T) {
 
 	txB.TxInputs = cp
 
-	res := Equal(txA, txB)
-
-	assert.False(t, res)
+	assert.False(t, Equal(txA, txB))
 }
 
 func TestEqual_False_TxIns_Len(t *testing.T) {
@@ -127,9 +115,7 @@ func TestEqual_False_TxIns_Len(t *testing.T) {
 		Signature:   "fake_signature",
 	})
 
-	res := Equal(txA, txB)
-
-	assert.False(t, res)
+	assert.False(t, Equal(txA, txB))
 }
 
 func TestEqual_False_TxOut_Value(t *testing.T) {
@@ -144,9 +130,7 @@ func TestEqual_False_TxOut_Value(t *testing.T) {
 
 	txB.TxOutputs = cp
 
-	res := Equal(txA, txB)
-
-	assert.False(t, res)
+	assert.False(t, Equal(txA, txB))
 }
 
 func TestEqual_False_TxOut_PublicKey(t *testing.T) {
@@ -161,16 +145,12 @@ func TestEqual_False_TxOut_PublicKey(t *testing.T) {
 
 	txB.TxOutputs = cp
 
-	res := Equal(txA, txB)
-
-	assert.False(t, res)
+	assert.False(t, Equal(txA, txB))
 }
 
 func TestEqual_True(t *testing.T) {
 	txA := New(txIns, txOuts)
 	txB := New(txIns, txOuts)
 
-	res := Equal(txA, txB)
-
-	assert.True(t, res)
+	assert.True(t, Equal(txA, txB))
 }

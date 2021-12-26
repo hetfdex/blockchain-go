@@ -13,7 +13,8 @@ const (
 )
 
 type Transaction struct {
-	ID        []byte
+	ID []byte
+	//CreatedAt
 	TxInputs  []TransactionInput
 	TxOutputs []TransactionOutput
 }
