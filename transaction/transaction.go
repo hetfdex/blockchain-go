@@ -4,36 +4,66 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/json"
+	"errors"
+	"time"
+
+	"github.com/hetfdex/blockchain-go/wallet"
 )
 
 const (
-	rewardValue     = 50
-	genesisSender   = "genesis_sender"
-	genesisReceiver = "genesis_receiver"
+	minerRewardAmount = 100
+
+	minerRewardSender = "miner_reward_sender"
+)
+
+var (
+	errUpdate = errors.New("update not valid: amount exceeds balance")
 )
 
 type Transaction struct {
-	ID []byte
-	//CreatedAt
-	TxInputs  []TransactionInput
-	TxOutputs []TransactionOutput
+	ID        []byte
+	TxInput   TransactionInput
+	OutputMap map[string]uint64
 }
 
 type TransactionInput struct {
-	ID          []byte
-	OutputIndex uint64
-	Signature   string
+	CreatedAt       time.Time
+	SenderAddress   []byte
+	Balance         uint64
+	SenderSignature []byte
 }
 
-type TransactionOutput struct {
-	Value     uint64
-	PublicKey string
-}
+func New(senderWallet wallet.Wallet, recipientAddress []byte, amount uint64) (Transaction, error) {
+	//Wallet.calculateBalance({chain, address: this.publicKey}) -> if !balance : err
+	outputMap := newOutputMap(senderWallet, recipientAddress, amount)
 
-func New(txInputs []TransactionInput, txOutputs []TransactionOutput) Transaction {
+	txInput, err := newTxInput(senderWallet, outputMap)
+
+	if err != nil {
+		return Transaction{}, err
+	}
+
 	tx := Transaction{
-		TxInputs:  txInputs,
-		TxOutputs: txOutputs,
+		TxInput:   txInput,
+		OutputMap: outputMap,
+	}
+
+	tx.setID()
+
+	return tx, nil
+}
+
+func MinerReward(minerWallet wallet.Wallet) Transaction {
+	outputMap := make(map[string]uint64)
+
+	outputMap[string(minerWallet.PublicKey)] = minerRewardAmount
+
+	tx := Transaction{
+		TxInput: TransactionInput{
+			CreatedAt:     time.Now().UTC(),
+			SenderAddress: []byte(minerRewardSender),
+		},
+		OutputMap: outputMap,
 	}
 
 	tx.setID()
@@ -41,22 +71,110 @@ func New(txInputs []TransactionInput, txOutputs []TransactionOutput) Transaction
 	return tx
 }
 
-func Genesis() Transaction {
-	inputs := []TransactionInput{
-		{
-			OutputIndex: 0,
-			Signature:   genesisSender,
-		},
+func (t *Transaction) Update(senderWallet wallet.Wallet, recipientAddress []byte, amount uint64) error {
+	if amount > t.OutputMap[string(senderWallet.PublicKey)] {
+		return errUpdate
 	}
 
-	outputs := []TransactionOutput{
-		{
-			Value:     rewardValue,
-			PublicKey: genesisReceiver,
-		},
+	if t.OutputMap[string(recipientAddress)] == 0 { //nil?
+		t.OutputMap[string(recipientAddress)] = amount
+	} else {
+		t.OutputMap[string(recipientAddress)] = t.OutputMap[string(recipientAddress)] + amount
+
+	}
+	t.OutputMap[string(senderWallet.PublicKey)] = t.OutputMap[string(senderWallet.PublicKey)] - amount
+
+	txInput, err := newTxInput(senderWallet, t.OutputMap)
+
+	if err != nil {
+		return err
+	}
+	t.TxInput = txInput
+
+	return nil
+}
+
+func (t *Transaction) Valid() bool {
+	var outputTotal uint64
+
+	for add := range t.OutputMap {
+		outputTotal += t.OutputMap[add]
 	}
 
-	return New(inputs, outputs)
+	if outputTotal != t.TxInput.Balance {
+		return false
+	}
+
+	/* if !Verify(t.TxInput.SenderAddress, t.OutputMap, t.TxInput.SenderSignature) {
+		log.Println(warnValidSignature)
+
+		return false
+	} */
+
+	return true
+}
+
+func Equal(a Transaction, b Transaction) bool {
+	if !bytes.Equal(a.ID, b.ID) {
+		return false
+	}
+
+	outMapA := a.OutputMap
+	outMapB := b.OutputMap
+
+	if len(outMapA) != len(outMapB) {
+		return false
+	}
+
+	for add := range outMapA {
+		if outMapA[add] != outMapB[add] {
+			return false
+		}
+	}
+
+	txInA := a.TxInput
+	txInB := b.TxInput
+
+	if !txInA.CreatedAt.Equal(txInB.CreatedAt) {
+		return false
+	}
+
+	if !bytes.Equal(txInA.SenderAddress, txInB.SenderAddress) {
+		return false
+	}
+
+	if txInA.Balance != txInB.Balance {
+		return false
+	}
+
+	if !bytes.Equal(txInA.SenderSignature, txInB.SenderSignature) {
+		return false
+	}
+	return true
+}
+
+func newTxInput(senderWallet wallet.Wallet, outputMap map[string]uint64) (TransactionInput, error) {
+	senderSignature, err := senderWallet.Sign(outputMap)
+
+	if err != nil {
+		return TransactionInput{}, err
+	}
+
+	return TransactionInput{
+		CreatedAt:       time.Now().UTC(),
+		SenderAddress:   senderWallet.PublicKey,
+		Balance:         senderWallet.Balance,
+		SenderSignature: senderSignature,
+	}, nil
+}
+
+func newOutputMap(senderWallet wallet.Wallet, recipientAddress []byte, amount uint64) map[string]uint64 {
+	outputMap := make(map[string]uint64)
+
+	outputMap[string(recipientAddress)] = amount
+	outputMap[string(senderWallet.PublicKey)] = senderWallet.Balance - amount
+
+	return outputMap
 }
 
 func (t *Transaction) setID() error {
@@ -76,54 +194,4 @@ func (t *Transaction) setID() error {
 	t.ID = hash[:]
 
 	return nil
-}
-
-func Equal(a Transaction, b Transaction) bool {
-	if !bytes.Equal(a.ID, b.ID) {
-		return false
-	}
-
-	txOutsA := a.TxOutputs
-	txOutsB := b.TxOutputs
-
-	if len(txOutsA) != len(txOutsB) {
-		return false
-	}
-
-	for i, txOutA := range txOutsA {
-		txOutB := txOutsB[i]
-
-		if txOutA.Value != txOutB.Value {
-			return false
-		}
-
-		if txOutA.PublicKey != txOutB.PublicKey {
-			return false
-		}
-	}
-
-	txInsA := a.TxInputs
-	txInsB := b.TxInputs
-
-	if len(txInsA) != len(txInsB) {
-		return false
-	}
-
-	for i, txInA := range txInsA {
-		txInB := txInsB[i]
-
-		if !bytes.Equal(txInA.ID, txInB.ID) {
-			return false
-		}
-
-		if txInA.OutputIndex != txInB.OutputIndex {
-			return false
-		}
-
-		if txInA.Signature != txInB.Signature {
-			return false
-		}
-
-	}
-	return true
 }

@@ -1,156 +1,277 @@
 package transaction
 
 import (
+	"fmt"
 	"testing"
+	"time"
 
+	"github.com/hetfdex/blockchain-go/wallet"
 	"github.com/stretchr/testify/assert"
 )
 
-var (
-	txIns = []TransactionInput{{
-		ID:          []byte("test_id"),
-		OutputIndex: 0,
-		Signature:   "test_signature",
-	}}
-
-	txOuts = []TransactionOutput{{
-		Value:     666,
-		PublicKey: "test_public_key",
-	}}
+const (
+	amount = uint64(666)
 )
 
-func TestNew(t *testing.T) {
-	tx := New(txIns, txOuts)
+var (
+	w = wallet.New()
 
-	assert.Equal(t, txIns, tx.TxInputs)
-	assert.Equal(t, txOuts, tx.TxOutputs)
-	assert.Equal(t, 32, len(tx.ID))
+	recipientAddress = []byte("test_recipient_address")
+)
+
+//func TestNew_Err(t *testing.T) {}
+
+func TestNew_Ok(t *testing.T) {
+	res, err := New(w, recipientAddress, amount)
+
+	tm := time.Now().UTC()
+
+	senderSignature, er := w.Sign(res.OutputMap)
+
+	if er != nil {
+		t.Fatal(er)
+	}
+
+	assert.Nil(t, err)
+	assert.Equal(t, 32, len(res.ID))
+	assert.Equal(t, amount, res.OutputMap[string(recipientAddress)])
+	assert.Equal(t, w.Balance-amount, res.OutputMap[string(w.PublicKey)])
+	assert.True(t, res.TxInput.CreatedAt.Before(tm))
+	assert.Equal(t, w.PublicKey, res.TxInput.SenderAddress)
+	assert.Equal(t, w.Balance, res.TxInput.Balance)
+	assert.Equal(t, senderSignature, res.TxInput.SenderSignature)
 }
 
 func TestGenesis(t *testing.T) {
-	tx := Genesis()
+	res := MinerReward(w)
 
-	assert.Equal(t, 1, len(tx.TxInputs))
-	assert.Equal(t, 1, len(tx.TxOutputs))
-	assert.Equal(t, 32, len(tx.ID))
-	assert.Equal(t, uint64(0), tx.TxInputs[0].OutputIndex)
-	assert.Equal(t, genesisSender, tx.TxInputs[0].Signature)
-	assert.Equal(t, uint64(rewardValue), tx.TxOutputs[0].Value)
-	assert.Equal(t, genesisReceiver, tx.TxOutputs[0].PublicKey)
+	tm := time.Now().UTC()
+
+	assert.Equal(t, 32, len(res.ID))
+	assert.Equal(t, uint64(minerRewardAmount), res.OutputMap[string(w.PublicKey)])
+	assert.True(t, res.TxInput.CreatedAt.Before(tm))
+	assert.Equal(t, []byte(minerRewardSender), res.TxInput.SenderAddress)
 }
 
-func TestEqual_False_Tx_ID(t *testing.T) {
-	txA := New(txIns, txOuts)
-	txB := New(txIns, txOuts)
+func TestUpdate_ErrUpdate(t *testing.T) {
+	tx, er := New(w, recipientAddress, amount)
 
-	txB.ID = []byte("fake_id")
+	if er != nil {
+		t.Fatal(er)
+	}
+
+	err := tx.Update(w, recipientAddress, amount)
+
+	assert.EqualError(t, err, errUpdate.Error())
+}
+
+//func TestUpdate_ErrSign(t *testing.T) {}
+
+func TestUpdate_AnotherRecipientAddress(t *testing.T) {
+	otherRecipientAddress := []byte("another_test_recipient_address")
+
+	updateAmount := amount / 2
+
+	res, er := New(w, recipientAddress, amount)
+
+	if er != nil {
+		t.Fatal(er)
+	}
+
+	finalSenderAmount := res.OutputMap[string(w.PublicKey)] - updateAmount
+
+	err := res.Update(w, otherRecipientAddress, updateAmount)
+
+	senderSignature, er := w.Sign(res.OutputMap)
+
+	if er != nil {
+		t.Fatal(er)
+	}
+
+	tm := time.Now().UTC()
+
+	assert.Nil(t, err)
+	assert.Equal(t, updateAmount, res.OutputMap[string(otherRecipientAddress)])
+	assert.Equal(t, finalSenderAmount, res.OutputMap[string(w.PublicKey)])
+	assert.True(t, res.TxInput.CreatedAt.Before(tm))
+	assert.Equal(t, w.PublicKey, res.TxInput.SenderAddress)
+	assert.Equal(t, w.Balance, res.TxInput.Balance)
+	assert.Equal(t, senderSignature, res.TxInput.SenderSignature)
+
+}
+
+func TestUpdate_SameRecipientAddress(t *testing.T) {
+	updateAmount := amount / 2
+
+	res, er := New(w, recipientAddress, amount)
+
+	if er != nil {
+		t.Fatal(er)
+	}
+
+	finalSenderAmount := res.OutputMap[string(w.PublicKey)] - updateAmount
+	finalRecipientAmount := res.OutputMap[string(recipientAddress)] + updateAmount
+
+	err := res.Update(w, recipientAddress, updateAmount)
+
+	senderSignature, er := w.Sign(res.OutputMap)
+
+	if er != nil {
+		t.Fatal(er)
+	}
+
+	tm := time.Now().UTC()
+
+	fmt.Println(res.OutputMap[string(recipientAddress)])
+	fmt.Println(res.OutputMap[string(recipientAddress)] + updateAmount)
+
+	assert.Nil(t, err)
+	assert.Equal(t, finalRecipientAmount, res.OutputMap[string(recipientAddress)])
+	assert.Equal(t, finalSenderAmount, res.OutputMap[string(w.PublicKey)])
+	assert.True(t, res.TxInput.CreatedAt.Before(tm))
+	assert.Equal(t, w.PublicKey, res.TxInput.SenderAddress)
+	assert.Equal(t, w.Balance, res.TxInput.Balance)
+	assert.Equal(t, senderSignature, res.TxInput.SenderSignature)
+}
+
+func TestValid_False_OutputTotal(t *testing.T) {
+	tx, er := New(w, recipientAddress, amount)
+
+	if er != nil {
+		t.Fatal(er)
+	}
+
+	tx.OutputMap[string(recipientAddress)] = amount * 2
+
+	assert.False(t, tx.Valid())
+}
+
+//func TestValid_False_Verify(t *testing.T) {}
+
+func TestValid_True(t *testing.T) {
+	tx, er := New(w, recipientAddress, amount)
+
+	if er != nil {
+		t.Fatal(er)
+	}
+
+	assert.True(t, tx.Valid())
+}
+
+var ()
+
+func TestEqual_False_TxID(t *testing.T) {
+	txA, er := New(w, recipientAddress, amount)
+
+	if er != nil {
+		t.Fatal(er)
+	}
+
+	txB := txA
+
+	txB.ID = []byte("fake_test_id")
 
 	assert.False(t, Equal(txA, txB))
 }
 
-func TestEqual_False_TxOuts_Len(t *testing.T) {
-	txA := New(txIns, txOuts)
-	txB := New(txIns, txOuts)
+func TestEqual_False_TxOutLen(t *testing.T) {
+	txA, er := New(w, recipientAddress, amount)
 
-	txB.TxOutputs = append(txB.TxOutputs, TransactionOutput{
-		Value:     1985,
-		PublicKey: "another_test_pubic_key",
-	})
+	if er != nil {
+		t.Fatal(er)
+	}
 
-	assert.False(t, Equal(txA, txB))
-}
+	txB := txA
 
-func TestEqual_False_TxIn_Id(t *testing.T) {
-	txA := New(txIns, txOuts)
-	txB := New(txIns, txOuts)
-
-	cp := make([]TransactionInput, len(txIns))
-
-	copy(cp, txIns)
-
-	cp[0].ID = []byte("fake_test_id")
-
-	txB.TxInputs = cp
+	txB.OutputMap = make(map[string]uint64)
 
 	assert.False(t, Equal(txA, txB))
 }
 
-func TestEqual_False_TxOut_OutputIndex(t *testing.T) {
-	txA := New(txIns, txOuts)
-	txB := New(txIns, txOuts)
+func TestEqual_False_TxOutEqualAmount(t *testing.T) {
+	txA, er := New(w, recipientAddress, amount)
 
-	cp := make([]TransactionInput, len(txIns))
+	if er != nil {
+		t.Fatal(er)
+	}
 
-	copy(cp, txIns)
+	txB := txA
 
-	cp[0].OutputIndex = 666
+	outpuMap := make(map[string]uint64, len(txA.OutputMap))
 
-	txB.TxInputs = cp
+	for add := range txA.OutputMap {
+		outpuMap[add] = txA.OutputMap[add] * 2
+	}
 
-	assert.False(t, Equal(txA, txB))
-}
-
-func TestEqual_False_TxOut_Signature(t *testing.T) {
-	txA := New(txIns, txOuts)
-	txB := New(txIns, txOuts)
-
-	cp := make([]TransactionInput, len(txIns))
-
-	copy(cp, txIns)
-
-	cp[0].Signature = "fake_signature"
-
-	txB.TxInputs = cp
+	txB.OutputMap = outpuMap
 
 	assert.False(t, Equal(txA, txB))
 }
 
-func TestEqual_False_TxIns_Len(t *testing.T) {
-	txA := New(txIns, txOuts)
-	txB := New(txIns, txOuts)
+func TestEqual_False_TxInCreatedAt(t *testing.T) {
+	txA, er := New(w, recipientAddress, amount)
 
-	txB.TxInputs = append(txB.TxInputs, TransactionInput{
-		ID:          []byte("fake_test_id"),
-		OutputIndex: 1,
-		Signature:   "fake_signature",
-	})
+	if er != nil {
+		t.Fatal(er)
+	}
 
-	assert.False(t, Equal(txA, txB))
-}
+	txB := txA
 
-func TestEqual_False_TxOut_Value(t *testing.T) {
-	txA := New(txIns, txOuts)
-	txB := New(txIns, txOuts)
-
-	cp := make([]TransactionOutput, len(txOuts))
-
-	copy(cp, txOuts)
-
-	cp[0].Value = 0
-
-	txB.TxOutputs = cp
+	txB.TxInput.CreatedAt = time.Now().UTC()
 
 	assert.False(t, Equal(txA, txB))
 }
 
-func TestEqual_False_TxOut_PublicKey(t *testing.T) {
-	txA := New(txIns, txOuts)
-	txB := New(txIns, txOuts)
+func TestEqual_False_TxInSenderAddress(t *testing.T) {
+	txA, er := New(w, recipientAddress, amount)
 
-	cp := make([]TransactionOutput, len(txOuts))
+	if er != nil {
+		t.Fatal(er)
+	}
 
-	copy(cp, txOuts)
+	txB := txA
 
-	cp[0].PublicKey = "fake_public_key"
+	txB.TxInput.SenderAddress = []byte("fake_sender_address")
 
-	txB.TxOutputs = cp
+	assert.False(t, Equal(txA, txB))
+}
+
+func TestEqual_False_TxInBalance(t *testing.T) {
+	txA, er := New(w, recipientAddress, amount)
+
+	if er != nil {
+		t.Fatal(er)
+	}
+
+	txB := txA
+
+	txB.TxInput.Balance = uint64(666)
+
+	assert.False(t, Equal(txA, txB))
+}
+
+func TestEqual_False_TxInSenderSignature(t *testing.T) {
+	txA, er := New(w, recipientAddress, amount)
+
+	if er != nil {
+		t.Fatal(er)
+	}
+
+	txB := txA
+
+	txB.TxInput.SenderSignature = []byte("fake_sender_signature")
 
 	assert.False(t, Equal(txA, txB))
 }
 
 func TestEqual_True(t *testing.T) {
-	txA := New(txIns, txOuts)
-	txB := New(txIns, txOuts)
+	txA, er := New(w, recipientAddress, amount)
+
+	if er != nil {
+		t.Fatal(er)
+	}
+
+	txB := txA
 
 	assert.True(t, Equal(txA, txB))
 }
