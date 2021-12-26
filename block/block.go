@@ -45,10 +45,14 @@ func New(previousHash []byte, transactions []transaction.Transaction) Block {
 }
 
 func Genesis() Block {
-	return New([]byte(genesisPreviousHash), []transaction.Transaction{transaction.Genesis()})
+	return New(
+		[]byte(
+			genesisPreviousHash),
+		[]transaction.Transaction{},
+	)
 }
 
-func (b *Block) ValidHash() bool {
+func (b *Block) Valid() bool {
 	var intHash big.Int
 
 	data := b.makeHashData(b.Nonce)
@@ -65,15 +69,11 @@ func (b *Block) ValidGenesis() bool {
 		return false
 	}
 
-	if len(b.Transactions) != 1 {
+	if len(b.Transactions) != 0 {
 		return false
 	}
 
-	if !transaction.Equal(b.Transactions[0], transaction.Genesis()) {
-		return false
-	}
-
-	return b.ValidHash()
+	return b.Valid()
 }
 
 func (b *Block) mine() {

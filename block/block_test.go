@@ -28,8 +28,6 @@ func TestNew(t *testing.T) {
 }
 
 func TestGenesis(t *testing.T) {
-	tx := transaction.Genesis()
-
 	b := Genesis()
 
 	tm := time.Now().UTC()
@@ -39,21 +37,21 @@ func TestGenesis(t *testing.T) {
 	assert.Equal(t, 32, len(b.Hash))
 	assert.True(t, b.Nonce != 0)
 	assert.Equal(t, 31, len(b.TargetDificulty.Bytes()))
-	assert.Equal(t, tx, b.Transactions[0])
+	assert.Equal(t, 0, len(b.Transactions))
 }
 
-func TestValidHash_False(t *testing.T) {
+func TestValid_False(t *testing.T) {
 	b := New(previousHash, []transaction.Transaction{})
 
 	b.Nonce = 666
 
-	assert.False(t, b.ValidHash())
+	assert.False(t, b.Valid())
 }
 
-func TestValidHash_True(t *testing.T) {
+func TestValid_True(t *testing.T) {
 	b := New(previousHash, []transaction.Transaction{})
 
-	assert.True(t, b.ValidHash())
+	assert.True(t, b.Valid())
 }
 
 func TestValidGenesis_False_PreviousHash(t *testing.T) {
@@ -64,18 +62,10 @@ func TestValidGenesis_False_PreviousHash(t *testing.T) {
 	assert.False(t, b.ValidGenesis())
 }
 
-func TestValidGenesis_False_Tx_Len(t *testing.T) {
+func TestValidGenesis_False_TxLen(t *testing.T) {
 	b := Genesis()
 
 	b.Transactions = append(b.Transactions, transaction.Transaction{ID: []byte("fake_test_id")})
-
-	assert.False(t, b.ValidGenesis())
-}
-
-func TestValidGenesis_False_Tx_Genesis(t *testing.T) {
-	b := Genesis()
-
-	b.Transactions[0] = transaction.Transaction{ID: []byte("fake_test_id")}
 
 	assert.False(t, b.ValidGenesis())
 }
