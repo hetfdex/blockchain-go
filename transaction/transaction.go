@@ -76,3 +76,53 @@ func (t *Transaction) setID() error {
 
 	return nil
 }
+
+func Equal(a Transaction, b Transaction) bool {
+	if !bytes.Equal(a.ID, b.ID) {
+		return false
+	}
+
+	txOutsA := a.TxOutputs
+	txOutsB := b.TxOutputs
+
+	if len(txOutsA) != len(txOutsB) {
+		return false
+	}
+
+	for i, txOutA := range txOutsA {
+		txOutB := txOutsB[i]
+
+		if txOutA.Value != txOutB.Value {
+			return false
+		}
+
+		if txOutA.PublicKey != txOutB.PublicKey {
+			return false
+		}
+	}
+
+	txInsA := a.TxInputs
+	txInsB := b.TxInputs
+
+	if len(txInsA) != len(txInsB) {
+		return false
+	}
+
+	for i, txInA := range txInsA {
+		txInB := txInsB[i]
+
+		if !bytes.Equal(txInA.ID, txInB.ID) {
+			return false
+		}
+
+		if txInA.OutputIndex != txInB.OutputIndex {
+			return false
+		}
+
+		if txInA.Signature != txInB.Signature {
+			return false
+		}
+
+	}
+	return true
+}
