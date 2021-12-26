@@ -13,12 +13,12 @@ type Wallet struct {
 }
 
 func New() Wallet {
-	kp := []byte("tbd")
+	kp := []byte("tbd") //ec.genKeyPair()
 
 	return Wallet{
 		Balance:   startingBalance,
 		Keypair:   kp,
-		PublicKey: kp,
+		PublicKey: kp, //keyPair.getPublic().encode("hex")
 	}
 }
 
@@ -28,7 +28,7 @@ func (w *Wallet) Sign(outputMap map[string]uint64) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return res, nil
+	return res, nil //this.keyPair.sign(cryptoHash(data))
 }
 
 func CalculateBalance() {}
