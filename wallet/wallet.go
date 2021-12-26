@@ -3,7 +3,7 @@ package wallet
 import "encoding/json"
 
 const (
-	startingBalance = 1000
+	StartingBalance = 1000
 )
 
 type Wallet struct {
@@ -16,7 +16,7 @@ func New() Wallet {
 	kp := []byte("tbd") //ec.genKeyPair()
 
 	return Wallet{
-		Balance:   startingBalance,
+		Balance:   StartingBalance,
 		Keypair:   kp,
 		PublicKey: kp, //keyPair.getPublic().encode("hex")
 	}

@@ -12,7 +12,7 @@ func TestNew(t *testing.T) {
 
 	w := New()
 
-	assert.Equal(t, uint64(startingBalance), w.Balance)
+	assert.Equal(t, uint64(StartingBalance), w.Balance)
 	assert.Equal(t, kp, w.Keypair)
 	assert.Equal(t, kp, w.PublicKey)
 }

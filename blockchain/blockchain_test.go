@@ -13,7 +13,6 @@ func TestNew(t *testing.T) {
 
 	bc := New()
 
-	assert.NotNil(t, bc)
 	assert.Equal(t, 1, len(bc.Blocks))
 	assert.Equal(t, b.PreviousHash, bc.Blocks[0].PreviousHash)
 	assert.Equal(t, b.Transactions, bc.Blocks[0].Transactions)
@@ -26,8 +25,13 @@ func TestAdd(t *testing.T) {
 
 	bc.Add(txs)
 
-	assert.NotNil(t, bc)
 	assert.Equal(t, 2, len(bc.Blocks))
 	assert.Equal(t, bc.Blocks[0].Hash, bc.Blocks[1].PreviousHash)
 	assert.Equal(t, txs, bc.Blocks[1].Transactions)
+}
+
+func TestValid_True(t *testing.T) {
+	bc := New()
+
+	assert.True(t, bc.Valid())
 }
