@@ -17,6 +17,8 @@ func TestNew(t *testing.T) {
 	assert.Equal(t, kp, w.PublicKey)
 }
 
+//func TestSign_Err(t *testing.T) {}
+
 func TestSign_Ok(t *testing.T) {
 	outputMap := make(map[string]uint64)
 

@@ -31,4 +31,4 @@ func (w *Wallet) Sign(outputMap map[string]uint64) ([]byte, error) {
 	return res, nil //this.keyPair.sign(cryptoHash(data))
 }
 
-func CalculateBalance() {}
+//func CalculateBalance() {} -> here?
