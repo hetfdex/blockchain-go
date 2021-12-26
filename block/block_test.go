@@ -2,126 +2,60 @@ package block
 
 import (
 	"testing"
+	"time"
 
 	"github.com/hetfdex/blockchain-go/transaction"
 	"github.com/stretchr/testify/assert"
 )
 
 var (
-	prevHash = []byte("test_prev_hash")
+	previousHash = []byte("test_previous_hash")
 )
 
-func TestNewBlock(t *testing.T) {
-	tx := transaction.Transaction{}
+func TestNew(t *testing.T) {
+	tx := transaction.Transaction{ID: []byte("test_id")}
 
-	b := New(prevHash, []transaction.Transaction{tx})
+	b := New(previousHash, []transaction.Transaction{tx})
 
-	assert.Equal(t, prevHash, b.PrevHash)
+	tm := time.Now().UTC()
+
+	assert.NotNil(t, b)
+	assert.Equal(t, previousHash, b.PreviousHash)
 	assert.Equal(t, 32, len(b.Hash))
-	assert.True(t, b.Nonce != 0)
-	assert.Equal(t, 31, len(b.Target.Bytes()))
+	assert.True(t, b.Nonce > 0)
+	assert.Equal(t, 31, len(b.TargetDificulty.Bytes()))
 	assert.Equal(t, tx, b.Transactions[0])
+	assert.True(t, b.CreatedAt.Before(tm))
 }
 
-func TestNewGenesisBlock(t *testing.T) {
-	to := "hetfdex"
+func TestGenesis(t *testing.T) {
+	tx := transaction.Genesis()
 
-	b := NewGenesis(to)
+	b := Genesis()
 
-	tx := transaction.NewGenesis(to)
+	tm := time.Now().UTC()
 
-	assert.Equal(t, []byte{}, b.PrevHash)
+	assert.NotNil(t, b)
+	assert.Equal(t, []byte(genesisPreviousHash), b.PreviousHash)
 	assert.Equal(t, 32, len(b.Hash))
 	assert.True(t, b.Nonce != 0)
-	assert.Equal(t, 31, len(b.Target.Bytes()))
+	assert.Equal(t, 31, len(b.TargetDificulty.Bytes()))
 	assert.Equal(t, tx, b.Transactions[0])
-
+	assert.True(t, b.CreatedAt.Before(tm))
 }
 
 func TestValidate_False(t *testing.T) {
-	b := New(prevHash, []transaction.Transaction{})
+	b := New(previousHash, []transaction.Transaction{})
 
 	b.Nonce = 666
 
+	assert.NotNil(t, b)
 	assert.False(t, b.Validate())
 }
 
 func TestValidate_True(t *testing.T) {
-	b := New(prevHash, []transaction.Transaction{})
+	b := New(previousHash, []transaction.Transaction{})
 
+	assert.NotNil(t, b)
 	assert.True(t, b.Validate())
-}
-
-func TestHashTransactions(t *testing.T) {
-	tx := transaction.Transaction{}
-
-	b := New(prevHash, []transaction.Transaction{tx})
-
-	res := b.HashTransactions()
-
-	assert.Equal(t, 32, len(res))
-}
-
-//Needs proper testing
-func TestFindUnspentTransactions(t *testing.T) {
-	from := "from"
-	to := "to"
-
-	prevHash := []byte("prev_hash")
-
-	tx1 := transaction.New(
-		[]transaction.TxInput{
-			{
-				ID:          []byte("626c61"),
-				OutputIndex: 0,
-				Signature:   to,
-			},
-			{
-				ID:          []byte("626c65"),
-				OutputIndex: 1,
-				Signature:   from,
-			},
-		},
-		[]transaction.TxOutput{
-			{
-				Value:     10,
-				PublicKey: from,
-			},
-			{
-				Value:     20,
-				PublicKey: to,
-			},
-		})
-
-	tx2 := transaction.New(
-		[]transaction.TxInput{
-			{
-				ID:          []byte("626c65"),
-				OutputIndex: 0,
-				Signature:   from,
-			},
-			{
-				ID:          []byte("626c61"),
-				OutputIndex: 1,
-				Signature:   to,
-			},
-		},
-		[]transaction.TxOutput{
-			{
-				Value:     50,
-				PublicKey: to,
-			},
-			{
-				Value:     30,
-				PublicKey: from,
-			},
-		})
-
-	transactions := []transaction.Transaction{tx1, tx2}
-
-	b := New(prevHash, transactions)
-
-	res := b.FindUnspentTransactions(to)
-
-	assert.Equal(t, transactions, res)
 }

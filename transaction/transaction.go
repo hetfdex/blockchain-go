@@ -7,25 +7,32 @@ import (
 )
 
 const (
-	reward = 100
-
-	genesisData = "genesis_data"
+	rewardValue     = 50
+	genesisSender   = "genesis_sender"
+	genesisReceiver = "genesis_receiver"
 )
 
-type TransactionValidator interface {
-	ValidGenesisTransaction() bool
-}
-
 type Transaction struct {
-	ID      []byte     `json:"id"`
-	Inputs  []TxInput  `json:"inputs"`
-	Outputs []TxOutput `json:"outputs"`
+	ID        []byte
+	TxInputs  []TransactionInput
+	TxOutputs []TransactionOutput
 }
 
-func New(inputs []TxInput, outputs []TxOutput) Transaction {
+type TransactionInput struct {
+	ID          []byte
+	OutputIndex uint64
+	Signature   string
+}
+
+type TransactionOutput struct {
+	Value     uint64
+	PublicKey string
+}
+
+func New(txInputs []TransactionInput, txOutputs []TransactionOutput) Transaction {
 	tx := Transaction{
-		Inputs:  inputs,
-		Outputs: outputs,
+		TxInputs:  txInputs,
+		TxOutputs: txOutputs,
 	}
 
 	tx.setID()
@@ -33,34 +40,22 @@ func New(inputs []TxInput, outputs []TxOutput) Transaction {
 	return tx
 }
 
-func NewGenesis(to string) Transaction {
-	inputs := []TxInput{
+func Genesis() Transaction {
+	inputs := []TransactionInput{
 		{
 			OutputIndex: 0,
-			Signature:   genesisData,
+			Signature:   genesisSender,
 		},
 	}
 
-	outputs := []TxOutput{
+	outputs := []TransactionOutput{
 		{
-			Value:     reward,
-			PublicKey: to,
+			Value:     rewardValue,
+			PublicKey: genesisReceiver,
 		},
 	}
 
 	return New(inputs, outputs)
-}
-
-func (t *Transaction) ValidGenesisTransaction() bool {
-	if len(t.ID) == 32 && len(t.Inputs) == 1 && len(t.Outputs) == 1 {
-		input := t.Inputs[0]
-		output := t.Outputs[0]
-
-		if input.ID == nil && input.OutputIndex == 0 {
-			return output.Value == reward
-		}
-	}
-	return false
 }
 
 func (t *Transaction) setID() error {
